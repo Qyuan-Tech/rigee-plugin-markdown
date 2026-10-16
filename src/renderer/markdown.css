@@ -1,0 +1,404 @@
+/*
+ * The Markdown preview's own styles.
+ *
+ * Imported from the renderer half, which the build turns into a <style> added when the half first
+ * loads — the first time a preview opens. The pane's chrome is under `.markdown` with the `markdown__` prefix, and its toolbar
+ * matches the image viewer's and the video player's. The document's typography is under
+ * `.markdown__doc` and nowhere else: what a document may put on the page is plain HTML elements,
+ * so styling them here cannot reach anything outside the preview.
+ */
+
+.markdown {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.markdown__bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  flex: 0 0 auto;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown__bar .btn {
+  height: 24px;
+  padding: 0 9px;
+  flex: none;
+}
+
+.markdown__where {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11.5px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.markdown__note {
+  flex: none;
+  font-size: 11px;
+  color: var(--git-modified);
+}
+
+.markdown__spacer {
+  flex: 1;
+}
+
+.markdown__body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.markdown__scroller {
+  height: 100%;
+  overflow: auto;
+  outline: none;
+  /* The shell is chrome and selects nothing; a document is for reading, and copying from. */
+  user-select: text;
+  cursor: auto;
+}
+
+/* `hidden` loses to any display an author rule sets, so it is said again here. */
+.markdown__scroller[hidden] {
+  display: none;
+}
+
+/* --- the document ---------------------------------------------------------------------------- */
+
+.markdown__doc {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 28px 40px 72px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--fg);
+  overflow-wrap: break-word;
+}
+
+.markdown__doc > :first-child {
+  margin-top: 0 !important;
+}
+
+.markdown__doc > :last-child {
+  margin-bottom: 0 !important;
+}
+
+.markdown__doc :is(p, ul, ol, dl, blockquote, table, pre, details, figure, .markdown-frontmatter) {
+  margin: 0 0 16px;
+}
+
+.markdown__doc :is(h1, h2, h3, h4, h5, h6) {
+  margin: 28px 0 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--fg-bright);
+}
+
+.markdown__doc h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown__doc h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+
+.markdown__doc h3 {
+  font-size: 1.25em;
+}
+
+.markdown__doc h4 {
+  font-size: 1em;
+}
+
+.markdown__doc h5 {
+  font-size: 0.875em;
+}
+
+.markdown__doc h6 {
+  font-size: 0.85em;
+  color: var(--fg-muted);
+}
+
+/* Only an <a> that goes somewhere: a named anchor, or one whose `javascript:` the sanitiser took, is text. */
+.markdown__doc a[href] {
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.markdown__doc a[href]:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.markdown__doc :is(strong, b) {
+  font-weight: 600;
+  color: var(--fg-bright);
+}
+
+.markdown__doc :is(ul, ol) {
+  padding-left: 2em;
+}
+
+.markdown__doc :is(ul, ol) :is(ul, ol) {
+  margin-bottom: 0;
+}
+
+.markdown__doc li + li {
+  margin-top: 0.25em;
+}
+
+/* Task lists: the box stands where the bullet would. */
+.markdown__doc li:has(> input[type='checkbox']:first-child),
+.markdown__doc li:has(> p:first-child > input[type='checkbox']:first-child) {
+  list-style: none;
+}
+
+.markdown__doc input[type='checkbox'] {
+  margin: 0 0.4em 0 -1.5em;
+  vertical-align: -0.1em;
+  accent-color: var(--accent);
+}
+
+.markdown__doc blockquote {
+  padding: 0 1em;
+  color: var(--fg-muted);
+  border-left: 0.25em solid var(--border-strong);
+}
+
+.markdown__doc hr {
+  height: 0.25em;
+  margin: 24px 0;
+  padding: 0;
+  background: var(--border);
+  border: 0;
+}
+
+.markdown__doc img {
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+.markdown__doc :is(code, kbd, samp, tt) {
+  font-family: var(--font-mono);
+}
+
+.markdown__doc :not(pre) > code {
+  padding: 0.15em 0.4em;
+  font-size: 85%;
+  background: var(--bg-raised);
+  border-radius: var(--r-sm);
+}
+
+.markdown__doc pre {
+  padding: 12px 16px;
+  overflow: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.markdown__doc pre code {
+  white-space: pre;
+  tab-size: 4;
+  overflow-wrap: normal;
+}
+
+.markdown__doc kbd {
+  display: inline-block;
+  padding: 2px 5px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--fg-bright);
+  vertical-align: middle;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 -1px 0 var(--border-strong);
+}
+
+.markdown__doc table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.markdown__doc :is(th, td) {
+  padding: 6px 13px;
+  border: 1px solid var(--border-strong);
+}
+
+.markdown__doc th {
+  font-weight: 600;
+  color: var(--fg-bright);
+  background: var(--bg-raised);
+}
+
+.markdown__doc tr:nth-child(2n) td {
+  background: var(--bg-panel);
+}
+
+.markdown__doc details summary {
+  cursor: pointer;
+}
+
+.markdown__doc mark {
+  color: inherit;
+  background: #e3bb5e40;
+  border-radius: 2px;
+}
+
+.markdown__doc :is(sub, sup) {
+  line-height: 0;
+}
+
+.markdown__doc dl dt {
+  font-weight: 600;
+  color: var(--fg-bright);
+}
+
+.markdown__doc dl dd {
+  margin: 0 0 8px 1.5em;
+}
+
+/* --- what the preview adds ------------------------------------------------------------------- */
+
+/* A picture not shown — on the web and not asked for, or missing — as its alt text, in a box. */
+.markdown__doc .markdown-image {
+  display: inline-block;
+  max-width: 100%;
+  padding: 0 7px;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-sm);
+  cursor: help;
+}
+
+.markdown__doc a[href] .markdown-image {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+/* Front matter: YAML at the very top, shown as YAML under a label rather than run into the text. */
+.markdown__doc .markdown-frontmatter::before {
+  content: 'Front matter';
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+}
+
+.markdown__doc .markdown-frontmatter pre {
+  margin: 0;
+}
+
+/* GitHub's alerts: `> [!NOTE]` and its siblings. One colour each, from the palette's own. */
+.markdown__doc .markdown-alert {
+  --alert: var(--kind-file);
+  padding: 8px 16px;
+  color: inherit;
+  border-left-color: var(--alert);
+}
+
+.markdown__doc .markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown__doc .markdown-alert--tip {
+  --alert: var(--git-added);
+}
+
+.markdown__doc .markdown-alert--important {
+  --alert: var(--accent-violet);
+}
+
+.markdown__doc .markdown-alert--warning {
+  --alert: var(--git-modified);
+}
+
+.markdown__doc .markdown-alert--caution {
+  --alert: var(--git-deleted);
+}
+
+.markdown__doc .markdown-alert__title {
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--alert);
+}
+
+/* Code colours: Rigee's editor theme's, by value, so a block reads as the editor does. */
+.markdown__doc .tok-comment {
+  color: #7c8499;
+  font-style: italic;
+}
+
+.markdown__doc .tok-keyword {
+  color: #c49bfb;
+}
+
+.markdown__doc .tok-string {
+  color: #96dcab;
+}
+
+.markdown__doc :is(.tok-number, .tok-escape) {
+  color: #e3bb5e;
+}
+
+.markdown__doc .tok-type {
+  color: #4dd8ef;
+}
+
+.markdown__doc .tok-tag {
+  color: #8b9aff;
+}
+
+.markdown__doc .tok-attribute {
+  color: #9cdcfe;
+}
+
+.markdown__doc .tok-variable {
+  color: #c6ccdb;
+}
+
+.markdown__doc .tok-regexp,
+.markdown__doc .tok-invalid {
+  color: #e8848c;
+}
+
+.markdown__doc .tok-punctuation {
+  color: #9199ae;
+}
+
+.markdown__doc .tok-emphasis {
+  font-style: italic;
+}
+
+.markdown__doc .tok-strong {
+  font-weight: 600;
+}
