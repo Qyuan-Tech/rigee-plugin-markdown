@@ -10,7 +10,7 @@ in a preview of their own; pictures on disk are shown, and pictures on the web o
 
 In Rigee, open the **Plugins** view, search for `markdown` and install
 **Qyuan-Tech/rigee-plugin-markdown**. Rigee downloads the latest release, checks it against the
-checksum GitHub reports for it, and asks before anything runs. It needs Rigee 0.0.1-alpha.6 or later.
+checksum GitHub reports for it, and asks before anything runs. It needs Rigee 1.1.0 or later.
 
 It is offered, never chosen: a Markdown file still opens in the text editor to be written, and the
 preview is **Open Preview** in the file's menu.
@@ -48,8 +48,6 @@ npm pack                # rigee-plugin-markdown-<version>.tgz, the release asset
 
 To try a build in Rigee without publishing it, unpack the tarball's `package/` into
 `<userData>/plugins/markdown/` and approve it in the Plugins view.
-
-`@rigee/plugin-api` is not on npm yet; `vendor/` holds the copy this plugin is built against.
 
 ## Releasing
 
