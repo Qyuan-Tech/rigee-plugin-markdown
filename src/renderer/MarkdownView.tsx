@@ -75,6 +75,19 @@ export function MarkdownView({ filePath, tabId }: PluginEditorProps): React.Reac
 
   useEffect(() => watchFile(filePath, () => setVersion((v) => v + 1)), [filePath])
 
+  // A <details> opened or closed — by the reader, or by find — stays that way through redraws and
+  // tab switches, as their place does. `toggle` does not bubble, so it is heard on its way down.
+  useEffect(() => {
+    const page = article.current
+    if (!page) return
+    const onToggle = (e: Event): void => {
+      const key = folds(page).find(([details]) => details === e.target)?.[1]
+      if (key !== undefined) memory.folds.set(key, (e.target as HTMLDetailsElement).open)
+    }
+    page.addEventListener('toggle', onToggle, true)
+    return () => page.removeEventListener('toggle', onToggle, true)
+  }, [memory])
+
   useEffect(
     () =>
       onAnchor(tabId, (fragment) => {
@@ -98,6 +111,10 @@ export function MarkdownView({ filePath, tabId }: PluginEditorProps): React.Reac
 
         const doc = sanitize(html)
         decorate(doc)
+        for (const [details, key] of folds(doc)) {
+          const open = memory.folds.get(key)
+          if (open !== undefined) details.open = open
+        }
         page.replaceChildren(doc)
         for (const picture of retired.current.splice(0)) release(picture)
         const { held, pending } = showPictures(page, { file: filePath, root, remote, pictures: memory.pictures, live })
@@ -515,6 +532,21 @@ function reveal(img: HTMLImageElement, url: string): void {
   img.onerror = () => { standIn(img, 'This picture could not be drawn.') }
   img.src = url
   img.hidden = false
+}
+
+/**
+ * Every `<details>` under `root`, with what tells it apart from a redraw to the next: its summary,
+ * and how many before it have the same one. Not its place in the document, which an agent writing
+ * a section above it changes.
+ */
+function folds(root: ParentNode): [HTMLDetailsElement, string][] {
+  const seen = new Map<string, number>()
+  return [...root.querySelectorAll('details')].map((details) => {
+    const summary = details.querySelector(':scope > summary')?.textContent?.trim() ?? ''
+    const n = seen.get(summary) ?? 0
+    seen.set(summary, n + 1)
+    return [details, `${n} ${summary}`]
+  })
 }
 
 /**
