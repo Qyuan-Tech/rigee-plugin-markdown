@@ -1,6 +1,7 @@
-import { duplicatedFrom, Notice, openFile, readFile, useActiveWorkspace } from '@rigee/plugin-api'
+import { duplicatedFrom, icons, Notice, openFile, readFile, useActiveWorkspace } from '@rigee/plugin-api'
 import { useEffect, useRef, useState } from 'react'
 import { PREVIEW_VIEW } from '../names'
+import { bringIntoView, findMatches, NOTHING_FOUND, paintMatches, startingMatch, type Found } from './find'
 import { highlight } from './highlight'
 import { remember, release, type Picture } from './memory'
 import { parseMarkdown } from './parse'
@@ -27,6 +28,9 @@ import './markdown.css'
  * for the second time. Ones on disk take milliseconds; this is for the one that never comes.
  */
 const SETTLE_LIMIT_MS = 2000
+
+/** The key that opens the find bar, as the platform writes it. */
+const FIND_KEY = /^Mac/.test(navigator.platform) ? '⌘F' : 'Ctrl+F'
 
 interface Shown {
   /** The bytes were not UTF-8, so what is on screen is a best-effort decoding. */
@@ -165,8 +169,133 @@ export function MarkdownView({ filePath, tabId }: PluginEditorProps): React.Reac
   /** Nothing to read: the file could not be, or there is nothing in it. A notice takes the pane. */
   const blank = error !== null || shown?.empty === true
 
+  // --- find in the document ----------------------------------------------------------------------
+
+  const [finding, setFinding] = useState(false)
+  const [query, setQuery] = useState('')
+  const [found, setFound] = useState<Found>(NOTHING_FOUND)
+  /** Which match the bar is on; -1 with none. */
+  const [active, setActive] = useState(-1)
+  /** Bumped when the document changes under an open bar, to find again in what is there now. */
+  const [redrawn, setRedrawn] = useState(0)
+  /** Bumped by Cmd+F, to hand the box the keyboard — again, if the bar is already open. */
+  const [findFocus, setFindFocus] = useState(0)
+  const findBox = useRef<HTMLInputElement>(null)
+  /** The query the matches were found for: a new one picks where to start, a redraw keeps its place. */
+  const searched = useRef<string | null>(null)
+  /** This pane, to the highlights every preview in the window shares. */
+  const [pane] = useState(() => ({}))
+
+  // The document drawn again under an open bar: the file changed, code was coloured, a picture
+  // stands in as its alt text. Coalesced, as colouring replaces one block at a time.
+  useEffect(() => {
+    const page = article.current
+    if (!finding || !page) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const observer = new MutationObserver(() => {
+      clearTimeout(timer)
+      timer = setTimeout(() => setRedrawn((n) => n + 1), 50)
+    })
+    observer.observe(page, { childList: true, subtree: true, characterData: true })
+    return () => {
+      observer.disconnect()
+      clearTimeout(timer)
+    }
+  }, [finding])
+
+  useEffect(() => {
+    const page = article.current
+    const view = scroller.current
+    if (!finding || !page || !view) return
+    const next = blank ? NOTHING_FOUND : findMatches(page, query)
+    setFound(next)
+    if (searched.current === query) {
+      // Found again in a redrawn document: the same match by number, and nothing scrolls — the
+      // reader's place is theirs, as it is through every redraw.
+      setActive((i) => (next.ranges.length === 0 ? -1 : Math.min(Math.max(i, 0), next.ranges.length - 1)))
+      return
+    }
+    searched.current = query
+    const at = startingMatch(next.ranges, found.ranges[active] ?? null, view)
+    setActive(at)
+    if (at >= 0) {
+      takeOver()
+      bringIntoView(next.ranges[at]!, view)
+    }
+    // Not `found` or `active`: they are where a new query starts from, never a reason to find again.
+  }, [finding, query, redrawn, blank])
+
+  useEffect(() => {
+    if (!finding) return
+    paintMatches(pane, found.ranges, found.ranges[active] ?? null)
+    return () => { paintMatches(pane, [], null) }
+  }, [finding, found, active, pane])
+
+  // An effect rather than autoFocus: a second Cmd+F has to select the query again.
+  useEffect(() => {
+    if (!finding) return
+    findBox.current?.focus()
+    findBox.current?.select()
+  }, [finding, findFocus])
+
+  const openFind = (): void => {
+    setFinding(true)
+    setFindFocus((n) => n + 1)
+  }
+
+  const closeFind = (): void => {
+    const match = found.ranges[active]
+    setFinding(false)
+    setFound(NOTHING_FOUND)
+    setActive(-1)
+    searched.current = null
+    scroller.current?.focus({ preventScroll: true })
+    // As a browser leaves it: the match the reader stopped on is selected, to copy.
+    if (match && !match.collapsed) {
+      const selection = window.getSelection()
+      selection?.removeAllRanges()
+      selection?.addRange(match)
+    }
+  }
+
+  const go = (step: 1 | -1): void => {
+    const count = found.ranges.length
+    const view = scroller.current
+    if (count === 0 || !view) return
+    const at = (active + step + count) % count
+    setActive(at)
+    takeOver()
+    bringIntoView(found.ranges[at]!, view)
+  }
+
+  /** Cmd+F anywhere in the pane; with the bar open, Cmd+G or F3 for the next match and Escape to close it. */
+  const onKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.nativeEvent.isComposing) return
+    const mod = e.metaKey || e.ctrlKey
+    const key = e.key.toLowerCase()
+    if (mod && !e.altKey && !e.shiftKey && key === 'f') {
+      e.preventDefault()
+      if (!blank) openFind()
+      return
+    }
+    if (!finding) return
+    if ((mod && !e.altKey && key === 'g') || e.key === 'F3') {
+      e.preventDefault()
+      go(e.shiftKey ? -1 : 1)
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      closeFind()
+    }
+  }
+
+  const findStatus = !query.trim()
+    ? ''
+    : found.ranges.length === 0
+      ? 'No results'
+      : `${active + 1} of ${found.ranges.length}${found.more ? '+' : ''}`
+
   return (
-    <div className="markdown">
+    <div className="markdown" onKeyDown={onKeyDown}>
       <div className="markdown__bar">
         <span className="markdown__where" title={filePath}>{where}</span>
         {shown?.notUtf8 && (
@@ -193,6 +322,38 @@ export function MarkdownView({ filePath, tabId }: PluginEditorProps): React.Reac
         <button className="btn" title="Read the file, and its pictures, again" onClick={reload}>
           Reload
         </button>
+        {finding ? (
+          <div className="markdown__find">
+            <input
+              ref={findBox}
+              className="markdown__findbox"
+              value={query}
+              placeholder="Find in document"
+              aria-label="Find in document"
+              spellCheck={false}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter' || e.nativeEvent.isComposing) return
+                e.preventDefault()
+                go(e.shiftKey ? -1 : 1)
+              }}
+            />
+            <span className="markdown__findcount">{findStatus}</span>
+            <button className="btn" disabled={found.ranges.length === 0} title="Previous match (⇧⏎)" onClick={() => go(-1)}>
+              ‹
+            </button>
+            <button className="btn" disabled={found.ranges.length === 0} title="Next match (⏎)" onClick={() => go(1)}>
+              ›
+            </button>
+            <button className="btn" title="Close (Esc)" onClick={closeFind}>
+              <icons.Close />
+            </button>
+          </div>
+        ) : (
+          <button className="btn" disabled={!shown || blank} title={`Find in the document (${FIND_KEY})`} onClick={openFind}>
+            Find
+          </button>
+        )}
       </div>
 
       <div className="markdown__body">

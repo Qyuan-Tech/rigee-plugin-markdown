@@ -5,6 +5,8 @@ GitHub-flavoured, with tables, task lists, alerts, footnotes and front matter â€
 the file changes on disk, so a file an agent is writing in the terminal next door redraws as it
 grows. Code blocks are coloured by Rigee's own editor tokenizers; links to other Markdown files open
 in a preview of their own; pictures on disk are shown, and pictures on the web only when asked for.
+**Find** (âŒ˜F, Ctrl+F) searches the document as it reads, and keeps its matches current as the file
+changes.
 
 ## Installing
 
@@ -37,6 +39,7 @@ src/names.ts                the view type and extensions, read from package.json
 src/main/index.ts           main half: watches files, reads and fetches pictures
 src/renderer/index.tsx      renderer half: binds the editor
 src/renderer/parse.worker.ts  Markdown to HTML, off the window's thread
+src/renderer/find.ts        find in the document, painted with the CSS Custom Highlight API
 ```
 
 ```bash
